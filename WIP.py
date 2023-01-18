@@ -2,7 +2,7 @@ from PyQt6 import QtWidgets, QtCore
 import sys  # We need sys so that we can pass argv to QApplication
 
 app = QtWidgets.QApplication(sys.argv)
-
+print(sys.argv)
 #%%
 #!/usr/bin/env python3
 '''A lengthy example that shows some more complex uses of finplot:
@@ -34,6 +34,7 @@ import websocket
 import sys
 
 app = QApplication(sys.argv)
+print(sys.argv)
 
 class BinanceFutureWebsocket:
     def __init__(self):
@@ -118,12 +119,12 @@ class BinanceFutureWebsocket:
         print('websocket error: %s' % error)
 
 
-def do_load_price_history(symbol, interval):    
+def do_load_price_history(symbol, interval, period):    
     df = yf.download(  # or pdr.get_data_yahoo(...
 
             tickers = symbol,
             # valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-            period = "1mo",
+            period = period,
             #start = '2021-03-30',
             #end = '2021-04-01',
 
@@ -172,20 +173,20 @@ def do_load_price_history(symbol, interval):
 
 
 @lru_cache(maxsize=5)
-def cache_load_price_history(symbol, interval):
+def cache_load_price_history(symbol, interval, period):
     '''Stupid caching, but works sometimes.'''
-    return do_load_price_history(symbol, interval)
+    return do_load_price_history(symbol, interval, period)
 
 
-def load_price_history(symbol, interval):
+def load_price_history(symbol, interval, period):
     '''Use memoized, and if too old simply load the data.'''
-    df = cache_load_price_history(symbol, interval)
+    df = cache_load_price_history(symbol, interval, period)
     # check if cache's newest candle is current
     t0 = df.index[-2].timestamp()
     t1 = df.index[-1].timestamp()
     t2 = t1 + (t1 - t0)
     if now() >= t2:
-        df = do_load_price_history(symbol, interval)
+        df = do_load_price_history(symbol, interval, period)
     return df
 
 
@@ -308,9 +309,10 @@ def change_asset(*args, **kwargs):
 
     symbol = ctrl_panel.symbol.currentText()
     interval = ctrl_panel.interval.currentText()
+    period = ctrl_panel.period.currentText()
     #ws.close()
     #ws.df = None
-    df = load_price_history(symbol, interval=interval)
+    df = load_price_history(symbol, interval=interval, period=period)
     #ws.reconnect(symbol, interval, df)
 
     # remove any previous plots
