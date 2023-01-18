@@ -450,8 +450,8 @@ def create_ctrl_panel(win):
     
     
     panel.period = QComboBox(panel)
-    [panel.period.addItem(i) for i in '1d 5d 1mo 6mo 1y 2y 5y 10y ytd'.split()] #can't use 1m for 1mo period, cant use 1d 4h for 5d period
-    panel.period.setCurrentIndex(1) # change for number of intervals
+    [panel.period.addItem(i) for i in '1d 5d 1mo 6mo 1y 2y 5y 10y ytd'.split()] 
+    panel.period.setCurrentIndex(1) 
     layout.addWidget(panel.period, 0, 3)
     panel.period.currentTextChanged.connect(change_asset)
 
