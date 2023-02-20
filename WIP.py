@@ -2,7 +2,7 @@ from PyQt6 import QtWidgets, QtCore
 import sys  # We need sys so that we can pass argv to QApplication
 
 app = QtWidgets.QApplication(sys.argv)
-print(sys.argv)
+
 #%%
 #!/usr/bin/env python3
 '''A lengthy example that shows some more complex uses of finplot:
@@ -25,7 +25,7 @@ from functools import lru_cache
 import json
 from math import nan
 import pandas as pd
-from PyQt6.QtWidgets import QComboBox, QCheckBox, QWidget, QGridLayout, QApplication
+from PyQt6.QtWidgets import QComboBox, QCheckBox, QWidget, QGridLayout, QApplication 
 import pyqtgraph as pg
 import requests
 from time import time as now, sleep
@@ -34,7 +34,6 @@ import websocket
 import sys
 
 app = QApplication(sys.argv)
-print(sys.argv)
 
 class BinanceFutureWebsocket:
     def __init__(self):
@@ -119,7 +118,7 @@ class BinanceFutureWebsocket:
         print('websocket error: %s' % error)
 
 
-def do_load_price_history(symbol, interval, period):    
+def do_load_price_history(symbol, interval,period):    
     df = yf.download(  # or pdr.get_data_yahoo(...
 
             tickers = symbol,
@@ -173,14 +172,14 @@ def do_load_price_history(symbol, interval, period):
 
 
 @lru_cache(maxsize=5)
-def cache_load_price_history(symbol, interval, period):
+def cache_load_price_history(symbol, interval,period):
     '''Stupid caching, but works sometimes.'''
-    return do_load_price_history(symbol, interval, period)
+    return do_load_price_history(symbol, interval,period)
 
 
-def load_price_history(symbol, interval, period):
+def load_price_history(symbol, interval,period):
     '''Use memoized, and if too old simply load the data.'''
-    df = cache_load_price_history(symbol, interval, period)
+    df = cache_load_price_history(symbol, interval,period)
     # check if cache's newest candle is current
     t0 = df.index[-2].timestamp()
     t1 = df.index[-1].timestamp()
@@ -312,7 +311,7 @@ def change_asset(*args, **kwargs):
     period = ctrl_panel.period.currentText()
     #ws.close()
     #ws.df = None
-    df = load_price_history(symbol, interval=interval, period=period)
+    df = load_price_history(symbol, interval=interval, period=period,)
     #ws.reconnect(symbol, interval, df)
 
     # remove any previous plots
@@ -358,22 +357,39 @@ def change_asset(*args, **kwargs):
     # restores saved zoom position, if in range
     fplt.refresh()
 
+def add_wick_markers(df,symbol):
+    lo_wicks = df[['Open', 'Close']].T.min() - df['Low']
+    hi_wicks = df['High'] - df[['Open', 'Close']].T.max()
+    df['marker'] = pd.NA
+    df['marker2'] = pd.NA
+    df.loc[(lo_wicks > lo_wicks.quantile(0.99)), 'marker'] = df['Low']
+    df.loc[(hi_wicks > hi_wicks.quantile(0.99)), 'marker2'] = df['High']
+
+    ax, lines = fplt.candlestick_ochl(df[['Open', 'Close', 'High', 'Low']])
+    fplt.plot(df['Date'], df['marker'], ax=ax, color='#6A329F', style='^', legend='low wicks')
+    fplt.plot(df['Date'], df['marker2'], ax=ax, color='#6A329F', style='v', legend='high wicks')
+
+    for i, row in df.iterrows():
+        if not pd.isna(row['marker']):
+            fplt.add_text((row['Date'], row['marker']), f'{row["Low"]:.2f}', color='#FFFFFF', font_size=8, font_weight='bold')
+        if not pd.isna(row['marker2']):
+            fplt.add_text((row['Date'], row['marker2']), f'{row["High"]:.2f}', color='#FFFFFF', font_size=8, font_weight='bold')
 
 def dark_mode_toggle(dark):
     '''Digs into the internals of finplot and pyqtgraph to change the colors of existing
        plots, axes, backgronds, etc.'''
     # first set the colors we'll be using
     if dark:
-        fplt.foreground = '#777'
-        fplt.background = '#090c0e'
-        fplt.candle_bull_color = fplt.candle_bull_body_color = '#0b0'
-        fplt.candle_bear_color = '#a23'
+        fplt.foreground = '#eef'
+        fplt.background = '#242320'
+        fplt.candle_bull_color = fplt.candle_bull_body_color = '#352'
+        fplt.candle_bear_color = '#810'
         volume_transparency = '6'
     else:
         fplt.foreground = '#444'
         fplt.background = fplt.candle_bull_body_color = '#fff'
-        fplt.candle_bull_color = '#380'
-        fplt.candle_bear_color = '#c50'
+        fplt.candle_bull_color = '#352'
+        fplt.candle_bear_color = '#810'
         volume_transparency = 'c'
     fplt.volume_bull_color = fplt.volume_bull_body_color = fplt.candle_bull_color + volume_transparency
     fplt.volume_bear_color = fplt.candle_bear_color + volume_transparency
@@ -435,7 +451,7 @@ def create_ctrl_panel(win):
 
     panel.symbol = QComboBox(panel)
     #[panel.symbol.addItem(i+'USDT') for i in 'BTC ETH XRP DOGE BNB SOL ADA LTC LINK DOT TRX BCH'.split()]
-    [panel.symbol.addItem(i) for i in 'QQQ MSFT TSLA NFLX AAPL AMZN GOOG SPY ^SPX IWM META NVDA AMD '.split()]
+    [panel.symbol.addItem(i) for i in 'SPY ^SPX QQQ AAPL MSFT META TSLA NFLX AMZN GOOG IWM NVDA AMD'.split()]
     panel.symbol.setCurrentIndex(1)
     layout.addWidget(panel.symbol, 0, 0)
     panel.symbol.currentTextChanged.connect(change_asset)
@@ -452,8 +468,8 @@ def create_ctrl_panel(win):
     
     
     panel.period = QComboBox(panel)
-    [panel.period.addItem(i) for i in '1d 5d 1mo 6mo 1y 2y 5y 10y ytd'.split()] 
-    panel.period.setCurrentIndex(1) 
+    [panel.period.addItem(i) for i in '1d 5d 1mo 6mo 1y 2y 5y 10y ytd'.split()] #can't use 1m for 1mo period, cant use 1d 4h for 5d period
+    panel.period.setCurrentIndex(1) # change for number of intervals
     layout.addWidget(panel.period, 0, 3)
     panel.period.currentTextChanged.connect(change_asset)
 
@@ -481,9 +497,7 @@ fplt.max_zoom_points = 7
 fplt.autoviewrestore()
 ax,ax_rsi = fplt.create_plot('Stocks', rows=2, init_zoom_periods=300)
 axo = ax.overlay()
-
-# use websocket for real-time
-#ws = BinanceFutureWebsocket()
+add_wick_markers(df,symbol)
 ws = 0 #dummy variable to remove red warnings
 
 # hide rsi chart to begin with; show x-axis of top plot
